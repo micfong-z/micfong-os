@@ -1,13 +1,13 @@
 #![no_std]
 #![no_main]
 
-mod serial;
+use bootloader::{BootInfo, entry_point};
+use micfong_os::serial_println;
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(kernel_main);
+
+fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     serial_println!("\n\nWelcome to Micfong OS!");
-    let zero: i32 = 0;
-    serial_println!("Hello World{} {}", "!", 0/zero);
     loop {}
 }
 
