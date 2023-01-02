@@ -1,21 +1,22 @@
-#![no_std]
-#![no_main]
+fn main() {
+    // read env variables that were set in build script
+    let uefi_path = env!("UEFI_PATH");
+    let bios_path = env!("BIOS_PATH");
+    
+    // choose whether to start the UEFI or BIOS image
+    let uefi = true;
 
-use bootloader::{BootInfo, entry_point};
-use micfong_os::serial_println;
-
-entry_point!(kernel_main);
-
-fn kernel_main(_boot_info: &'static BootInfo) -> ! {
-    serial_println!("\n\nWelcome to Micfong OS!");
-    loop {}
-}
-
-use core::panic::PanicInfo;
-
-/// This function is called when Rust panics.
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    serial_println!("[PANIC] {}", info);
-    loop {}
+    let mut cmd = std::process::Command::new("qemu-system-x86_64");
+    if uefi {
+        cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
+        cmd.arg("-drive").arg(format!("format=raw,file={uefi_path}"));
+    } else {
+        cmd.arg("-drive").arg(format!("format=raw,file={bios_path}"));
+    }
+    cmd.arg("-serial").arg("stdio");
+    let Ok(mut child) = cmd.spawn() else { return () };
+    match child.wait() {
+        Ok(it) => it,
+        Err(_) => return (),
+    };
 }
