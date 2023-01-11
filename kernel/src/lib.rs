@@ -4,3 +4,4 @@
 pub mod serial;
 pub mod graphics;
 pub mod unifont;
+pub mod log;

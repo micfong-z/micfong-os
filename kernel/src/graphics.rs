@@ -59,8 +59,7 @@ pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
     if let Optional::Some(framebuffer) = framebuffer {
         let info = framebuffer.info();
         let framebuffer = framebuffer.buffer_mut();
-        let painter = PAINTER.get_or_init(move || LockedPainter::new(framebuffer, info));
-        painter.0.lock().draw_pixel(0, 0, 0xFF0000);
+        PAINTER.get_or_init(move || LockedPainter::new(framebuffer, info));
     }
 }
 
@@ -74,7 +73,7 @@ pub fn draw_rect(x: usize, y: usize, width: usize, height: usize, color: u32) {
     }
 }
 
-fn draw_char(x: usize, y: usize, c: char, color: u32) -> usize {
+pub fn draw_char(x: usize, y: usize, c: char, color: u32) -> usize {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     if let Some(glyph) = unifont::get_glyph(c) {
@@ -104,4 +103,11 @@ pub fn get_height() -> usize {
 
 pub fn get_width() -> usize {
     PAINTER.get().unwrap().0.lock().get_width()
+}
+
+pub fn get_char_width(c: char) -> usize {
+    if let Some(glyph) = unifont::get_glyph(c) {
+        return glyph.get_width();
+    }
+    return 0;
 }
