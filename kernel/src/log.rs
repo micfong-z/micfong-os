@@ -28,6 +28,7 @@ struct Logger {
     x: usize,
     y: usize,
     color: u32,
+    indent: usize,
 }
 
 impl Logger {
@@ -38,6 +39,7 @@ impl Logger {
             x: margin,
             y: margin,
             color: 0xFFFFFF,
+            indent: 0,
         }
     }
 
@@ -45,8 +47,7 @@ impl Logger {
         for c in s.chars() {
             let newx = self.x + graphics::get_char_width(c);
             if newx > graphics::get_width() - self.margin {
-                self.x = self.margin;
-                self.y += self.line_height;
+                self.new_line();
             }
             if c == '\n' {
                 self.new_line();
@@ -57,12 +58,27 @@ impl Logger {
     }
 
     fn new_line(&mut self) {
-        self.x = self.margin;
-        self.y += self.line_height;
+        self.x = self.margin + self.indent * 8;
+        graphics::draw_rect(self.x, self.y + self.line_height, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
+        let newy = self.y + self.line_height * 3;
+        if newy > graphics::get_height() - self.margin {
+            self.scroll_up();
+        } else {
+            self.y += self.line_height;
+        }
+    }
+
+    fn scroll_up(&mut self) {
+        self.y = self.margin;
+        graphics::draw_rect(self.x, self.margin, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
     }
 
     fn set_color(&mut self, color: u32) {
         self.color = color;
+    }
+
+    fn set_indent(&mut self, indent: usize) {
+        self.indent = indent;
     }
 }
 
@@ -85,6 +101,11 @@ impl fmt::Write for Logger {
 pub fn set_color(color: u32) {
     let mut logger = LOGGER.get().unwrap().0.lock();
     logger.set_color(color);
+}
+
+pub fn set_indent(indent: usize) {
+    let mut logger = LOGGER.get().unwrap().0.lock();
+    logger.set_indent(indent);
 }
 
 #[doc(hidden)]
@@ -111,7 +132,11 @@ macro_rules! log_trace {
     };
     ($($arg:tt)*) => {
         $crate::log::set_color(0xAAAAAA);
-        $crate::print!("[TRACE:] {}\n", format_args!($($arg)*));
+        $crate::print!("[TRACE:] ");
+        $crate::log::set_indent(9);
+        $crate::print!("{}", format_args!($($arg)*));
+        $crate::log::set_indent(0);
+        $crate::print!("\n");
     };
 }
 
@@ -124,7 +149,10 @@ macro_rules! log_info {
     ($($arg:tt)*) => {
         $crate::log::set_color(0xFFFFFF);
         $crate::print!("[ INFO ] ");
-        $crate::print!("{}\n", format_args!($($arg)*));
+        $crate::log::set_indent(9);
+        $crate::print!("{}", format_args!($($arg)*));
+        $crate::log::set_indent(0);
+        $crate::print!("\n");
     };
 }
 
@@ -138,7 +166,10 @@ macro_rules! log_warn {
         $crate::log::set_color(0xFCBB13);
         $crate::print!("[ WARN ] ");
         $crate::log::set_color(0xFDDD89);
-        $crate::print!("{}\n", format_args!($($arg)*));
+        $crate::log::set_indent(9);
+        $crate::print!("{}", format_args!($($arg)*));
+        $crate::log::set_indent(0);
+        $crate::print!("\n");
     };
 }
 
@@ -146,13 +177,18 @@ macro_rules! log_warn {
 macro_rules! log_error {
     () => {
         $crate::log::set_color(0xFA4B4B);
+        $crate::log::set_indent(9);
         $crate::print!("[ERROR!]\n");
+        $crate::log::set_indent(0);
     };
     ($($arg:tt)*) => {
         $crate::log::set_color(0xFA4B4B);
         $crate::print!("[ERROR!] ");
         $crate::log::set_color(0xFCA5A5);
-        $crate::print!("{}\n", format_args!($($arg)*));
+        $crate::log::set_indent(9);
+        $crate::print!("{}", format_args!($($arg)*));
+        $crate::log::set_indent(0);
+        $crate::print!("\n");
     };
 }
 
@@ -160,10 +196,16 @@ macro_rules! log_error {
 macro_rules! log_panic {
     () => {
         $crate::log::set_color(0xFA4B4B);
+        $crate::log::set_indent(9);
         $crate::print!("[PANIC!]\n");
+        $crate::log::set_indent(0);
     };
     ($($arg:tt)*) => {
         $crate::log::set_color(0xFA4B4B);
-        $crate::print!("[PANIC!] {}\n", format_args!($($arg)*));
+        $crate::print!("[PANIC!] ");
+        $crate::log::set_indent(9);
+        $crate::print!("{}", format_args!($($arg)*));
+        $crate::log::set_indent(0);
+        $crate::print!("\n");
     };
 }

@@ -6,7 +6,7 @@ use bootloader_api::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use kernel::log;
 use kernel::serial_println;
-use kernel::{graphics, log_info, log_panic, log_trace};
+use kernel::{log_info, log_panic};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -16,18 +16,14 @@ pub static BOOTLOADER_CONFIG: BootloaderConfig = {
 
 entry_point!(kernel_main, config = &BOOTLOADER_CONFIG);
 
-#[allow(unconditional_panic)]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    serial_println!("\n\nWelcome to Micfong OS!");
-    graphics::painter_init(&mut boot_info.framebuffer);
-    let screen_height = graphics::get_height();
-    let screen_width = graphics::get_width();
-    graphics::draw_rect(0, 0, screen_width, screen_height, 0x202020);
-    log::logger_init(20, 4);
+    kernel::init(boot_info);
+    
     log_info!("Welcome to Micfong OS!");
-    log_info!("Logger initialized");
-    log_trace!("Screen width: {}", screen_width);
-    log_trace!("Screen height: {}", screen_height);
+    serial_println!("\n\nWelcome to Micfong OS!");
+    x86_64::instructions::interrupts::int3();
+    log_info!("BREAKPOINT (int 0x3) tested");
+
     loop {}
 }
 

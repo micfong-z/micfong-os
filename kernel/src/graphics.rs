@@ -53,6 +53,26 @@ impl Painter {
         self.framebuffer[byte_offset..(byte_offset + bytes_per_pixel)]
             .copy_from_slice(&color[..bytes_per_pixel]);
     }
+
+    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, color: u32) {
+        let r = (color >> 16) as u8;
+        let g = (color >> 8) as u8;
+        let b = color as u8;
+        let color = match self.info.pixel_format {
+            PixelFormat::Rgb => [r, g, b, 0],
+            PixelFormat::Bgr => [b, g, r, 0],
+            other => panic!("Unsupported pixel format: {:?}", other),
+        };
+        let bytes_per_pixel = self.info.bytes_per_pixel;
+        for x in x..(x + width) {
+            for y in y..(y + height) {
+                let offset = y * self.info.stride + x;
+                let byte_offset = offset * bytes_per_pixel;
+                self.framebuffer[byte_offset..(byte_offset + bytes_per_pixel)]
+                    .copy_from_slice(&color[..bytes_per_pixel]);
+            }
+        }
+    }
 }
 
 pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
@@ -66,11 +86,14 @@ pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
 pub fn draw_rect(x: usize, y: usize, width: usize, height: usize, color: u32) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
-    for x in x..(x + width) {
-        for y in y..(y + height) {
-            painter.draw_pixel(x, y, color);
-        }
-    }
+    painter.draw_rect(x, y, width, height, color);
+}
+
+
+pub fn draw_pixel(x: usize, y: usize, color: u32) {
+    let painter = PAINTER.get().unwrap();
+    let mut painter = painter.0.lock();
+    painter.draw_pixel(x, y, color);
 }
 
 pub fn draw_char(x: usize, y: usize, c: char, color: u32) -> usize {
