@@ -97,6 +97,90 @@ pub fn draw_str(x: usize, y: usize, s: &str, color: u32) {
     }
 }
 
+fn draw_line_low(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
+    let painter = PAINTER.get().unwrap();
+    let mut painter = painter.0.lock();
+    let dx = x1 - x0;
+    let dy: usize;
+    let inverse: bool;
+    if y1 > y0 {
+        dy = y1 - y0;
+        inverse = false;
+    } else {
+        dy = y0 - y1;
+        inverse = true;
+    }
+    let mut d: i32 = (2 * dy as i32) - dx as i32;
+    let mut y = y0;
+    for x in x0..=x1 {
+        painter.draw_pixel(x, y, color);
+        if d > 0 {
+            if inverse == true {
+                y -= 1;
+            } else {
+                y += 1;
+            }
+            d += 2 * (dy as i32 - dx as i32);
+        } else {
+            d += 2 * dy as i32;
+        }
+    }
+}
+
+fn draw_line_high(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
+    let painter = PAINTER.get().unwrap();
+    let mut painter = painter.0.lock();
+    let dy = y1 - y0;
+    let dx: usize;
+    let inverse: bool;
+    if x1 > x0 {
+        dx = x1 - x0;
+        inverse = false;
+    } else {
+        dx = x0 - x1;
+        inverse = true;
+    }
+    let mut d = (2 * dx as i32) - dy as i32;
+    let mut x = x0;
+    for y in y0..=y1 {
+        painter.draw_pixel(x, y, color);
+        if d > 0 {
+            if inverse == true {
+                x -= 1;
+            } else {
+                x += 1;
+            }
+            d += 2 * (dx as i32 - dy as i32);
+        } else {
+            d += 2 * dx as i32;
+        }
+    }
+}
+
+pub fn draw_line(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
+    let dx = if x0 > x1 {x0 - x1} else {x1 - x0};
+    let dy = if y0 > y1 {y0 - y1} else {y1 - y0};
+    if x0 == x1 {
+        draw_rect(x0, y0, 1, dy+1, color);
+    } else if y0 == y1 {
+        draw_rect(x0, y0, dx+1, 1, color);
+    } else {
+        if dy < dx {
+            if x0 > x1 {
+                draw_line_low(x1, y1, x0, y0, color);
+            } else {
+                draw_line_low(x0, y0, x1, y1, color);
+            }
+        } else {
+            if y0 > y1 {
+                draw_line_high(x1, y1, x0, y0, color);
+            } else {
+                draw_line_high(x0, y0, x1, y1, color);
+            }
+        }
+    }
+}
+
 pub fn get_height() -> usize {
     PAINTER.get().unwrap().0.lock().get_height()
 }

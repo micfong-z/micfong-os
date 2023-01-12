@@ -24,6 +24,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let screen_width = graphics::get_width();
     graphics::draw_rect(0, 0, screen_width, screen_height, 0x202020);
     log::logger_init(20, 4);
+    log_info!("Welcome to Micfong OS!");
     log_info!("Logger initialized");
     log_trace!("Screen width: {}", screen_width);
     log_trace!("Screen height: {}", screen_height);
