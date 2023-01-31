@@ -10,8 +10,10 @@ fn main() {
     if uefi {
         cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
         cmd.arg("-drive").arg(format!("format=raw,file={uefi_path}"));
+        println!("Running UEFI image: {}", uefi_path);
     } else {
         cmd.arg("-drive").arg(format!("format=raw,file={bios_path}"));
+        println!("Running BIOS image: {}", bios_path);
     }
     cmd.arg("-serial").arg("stdio");
     let Ok(mut child) = cmd.spawn() else { return () };

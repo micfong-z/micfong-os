@@ -1,7 +1,7 @@
-use bootloader_api::info::{FrameBufferInfo, PixelFormat, Optional, FrameBuffer};
+use crate::unifont;
+use bootloader_api::info::{FrameBuffer, FrameBufferInfo, Optional, PixelFormat};
 use conquer_once::spin::OnceCell;
 use spin::Mutex;
-use crate::unifont;
 
 pub static PAINTER: OnceCell<LockedPainter> = OnceCell::uninit();
 pub struct LockedPainter(Mutex<Painter>);
@@ -37,41 +37,56 @@ impl Painter {
     pub fn get_width(&self) -> usize {
         self.info.width
     }
-
+    
     pub fn draw_pixel(&mut self, x: usize, y: usize, color: u32) {
         let offset = y * self.info.stride + x;
         let r = (color >> 16) as u8;
         let g = (color >> 8) as u8;
         let b = color as u8;
-        let color = match self.info.pixel_format {
-            PixelFormat::Rgb => [r, g, b, 0],
-            PixelFormat::Bgr => [b, g, r, 0],
+        match self.info.pixel_format {
+            PixelFormat::Bgr => {
+                self.framebuffer[offset * 4] = b;
+                self.framebuffer[offset * 4 + 1] = g;
+                self.framebuffer[offset * 4 + 2] = r;
+            }
+            PixelFormat::Rgb => {
+                self.framebuffer[offset * 4] = r;
+                self.framebuffer[offset * 4 + 1] = g;
+                self.framebuffer[offset * 4 + 2] = b;
+            }
             other => panic!("Unsupported pixel format: {:?}", other),
         };
-        let bytes_per_pixel = self.info.bytes_per_pixel;
-        let byte_offset = offset * bytes_per_pixel;
-        self.framebuffer[byte_offset..(byte_offset + bytes_per_pixel)]
-            .copy_from_slice(&color[..bytes_per_pixel]);
     }
 
     pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, color: u32) {
         let r = (color >> 16) as u8;
         let g = (color >> 8) as u8;
         let b = color as u8;
-        let color = match self.info.pixel_format {
-            PixelFormat::Rgb => [r, g, b, 0],
-            PixelFormat::Bgr => [b, g, r, 0],
+        match self.info.pixel_format {
+            PixelFormat::Bgr => {
+                for y in y..(y + height) {
+                    let offset = y * self.info.stride;
+                    for x in x..(x + width) {
+                        let byte_offset = (offset + x) * 4;
+                        self.framebuffer[byte_offset] = b;
+                        self.framebuffer[byte_offset + 1] = g;
+                        self.framebuffer[byte_offset + 2] = r;
+                    }
+                }
+            }
+            PixelFormat::Rgb => {
+                for y in y..(y + height) {
+                    let offset = y * self.info.stride;
+                    for x in x..(x + width) {
+                        let byte_offset = (offset + x) * 4;
+                        self.framebuffer[byte_offset] = r;
+                        self.framebuffer[byte_offset + 1] = g;
+                        self.framebuffer[byte_offset + 2] = b;
+                    }
+                }
+            }
             other => panic!("Unsupported pixel format: {:?}", other),
         };
-        let bytes_per_pixel = self.info.bytes_per_pixel;
-        for x in x..(x + width) {
-            for y in y..(y + height) {
-                let offset = y * self.info.stride + x;
-                let byte_offset = offset * bytes_per_pixel;
-                self.framebuffer[byte_offset..(byte_offset + bytes_per_pixel)]
-                    .copy_from_slice(&color[..bytes_per_pixel]);
-            }
-        }
     }
 }
 
@@ -88,7 +103,6 @@ pub fn draw_rect(x: usize, y: usize, width: usize, height: usize, color: u32) {
     let mut painter = painter.0.lock();
     painter.draw_rect(x, y, width, height, color);
 }
-
 
 pub fn draw_pixel(x: usize, y: usize, color: u32) {
     let painter = PAINTER.get().unwrap();
@@ -181,12 +195,12 @@ fn draw_line_high(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
 }
 
 pub fn draw_line(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
-    let dx = if x0 > x1 {x0 - x1} else {x1 - x0};
-    let dy = if y0 > y1 {y0 - y1} else {y1 - y0};
+    let dx = if x0 > x1 { x0 - x1 } else { x1 - x0 };
+    let dy = if y0 > y1 { y0 - y1 } else { y1 - y0 };
     if x0 == x1 {
-        draw_rect(x0, y0, 1, dy+1, color);
+        draw_rect(x0, y0, 1, dy + 1, color);
     } else if y0 == y1 {
-        draw_rect(x0, y0, dx+1, 1, color);
+        draw_rect(x0, y0, dx + 1, 1, color);
     } else {
         if dy < dx {
             if x0 > x1 {
