@@ -37,22 +37,35 @@ impl Painter {
     pub fn get_width(&self) -> usize {
         self.info.width
     }
+
+    pub fn move_all_up(&mut self, y: usize) {
+        let bytes_per_row = self.info.stride * self.info.bytes_per_pixel;
+        let bytes_per_move = y * bytes_per_row;
+        let bytes_to_move = (self.info.height - y) * bytes_per_row;
+    
+        unsafe {
+            let src = self.framebuffer.as_ptr().add(bytes_per_move);
+            let dst = self.framebuffer.as_mut_ptr();
+            core::ptr::copy(src, dst, bytes_to_move);
+        }
+    }
     
     pub fn draw_pixel(&mut self, x: usize, y: usize, color: u32) {
         let offset = y * self.info.stride + x;
         let r = (color >> 16) as u8;
         let g = (color >> 8) as u8;
         let b = color as u8;
+        let bytes_per_pixel = self.info.bytes_per_pixel;
         match self.info.pixel_format {
             PixelFormat::Bgr => {
-                self.framebuffer[offset * 4] = b;
-                self.framebuffer[offset * 4 + 1] = g;
-                self.framebuffer[offset * 4 + 2] = r;
+                self.framebuffer[offset * bytes_per_pixel] = b;
+                self.framebuffer[offset * bytes_per_pixel + 1] = g;
+                self.framebuffer[offset * bytes_per_pixel + 2] = r;
             }
             PixelFormat::Rgb => {
-                self.framebuffer[offset * 4] = r;
-                self.framebuffer[offset * 4 + 1] = g;
-                self.framebuffer[offset * 4 + 2] = b;
+                self.framebuffer[offset * bytes_per_pixel] = r;
+                self.framebuffer[offset * bytes_per_pixel + 1] = g;
+                self.framebuffer[offset * bytes_per_pixel + 2] = b;
             }
             other => panic!("Unsupported pixel format: {:?}", other),
         };
@@ -62,12 +75,13 @@ impl Painter {
         let r = (color >> 16) as u8;
         let g = (color >> 8) as u8;
         let b = color as u8;
+        let bytes_per_pixel = self.info.bytes_per_pixel;
         match self.info.pixel_format {
             PixelFormat::Bgr => {
                 for y in y..(y + height) {
                     let offset = y * self.info.stride;
                     for x in x..(x + width) {
-                        let byte_offset = (offset + x) * 4;
+                        let byte_offset = (offset + x) * bytes_per_pixel;
                         self.framebuffer[byte_offset] = b;
                         self.framebuffer[byte_offset + 1] = g;
                         self.framebuffer[byte_offset + 2] = r;
@@ -78,9 +92,9 @@ impl Painter {
                 for y in y..(y + height) {
                     let offset = y * self.info.stride;
                     for x in x..(x + width) {
-                        let byte_offset = (offset + x) * 4;
+                        let byte_offset = (offset + x) * bytes_per_pixel;
                         self.framebuffer[byte_offset] = r;
-                        self.framebuffer[byte_offset + 1] = g;
+                        self.framebuffer[byte_offset + 1] = g; 
                         self.framebuffer[byte_offset + 2] = b;
                     }
                 }
@@ -88,6 +102,12 @@ impl Painter {
             other => panic!("Unsupported pixel format: {:?}", other),
         };
     }
+}
+
+pub fn move_all_up(y: usize) {
+    let painter = PAINTER.get().unwrap();
+    let mut painter = painter.0.lock();
+    painter.move_all_up(y);
 }
 
 pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {

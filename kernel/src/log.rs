@@ -69,8 +69,14 @@ impl Logger {
     }
 
     fn scroll_up(&mut self) {
-        self.y = self.margin;
-        graphics::draw_rect(self.x, self.margin, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
+        // move everything up one line, and clear the last line
+        graphics::move_all_up(self.line_height);
+        // clear the last line
+        graphics::draw_rect(self.margin, graphics::get_height() - self.margin - self.line_height, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
+        // set the cursor to the last line
+
+        // self.y = self.margin;
+        // graphics::draw_rect(self.x, self.margin, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
     }
 
     fn set_color(&mut self, color: u32) {

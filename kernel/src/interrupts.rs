@@ -22,16 +22,18 @@ pub fn idt_init() {
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
     log_warn!(
         "CPU Exception:    BREAKPOINT (int 0x3)
-=========== STACK FRAME ==========
+
+═╡ STACK FRAME ╞══════════════════════
 {:#?}
-==================================",
+══════════════════════════════════════",
         stack_frame
     );
     serial_println!(
         "CPU Exception:    BREAKPOINT (int 0x3)
-=========== STACK FRAME ==========
+
+═╡ STACK FRAME ╞══════════════════════
 {:#?}
-==================================",
+══════════════════════════════════════",
         stack_frame
     );
 }
@@ -42,16 +44,18 @@ extern "x86-interrupt" fn double_fault_handler(
 ) -> ! {
     log_panic!(
         "CPU Exception:    #DF DOUBLE FAULT (int 0x8)
-=========== STACK FRAME ==========
+
+═╡ STACK FRAME ╞══════════════════════
 {:#?}
-==================================",
+══════════════════════════════════════",
         stack_frame
     );
     serial_println!(
         "CPU Exception:    #DF DOUBLE FAULT (int 0x8)
-=========== STACK FRAME ==========
+
+═╡ STACK FRAME ╞══════════════════════
 {:#?}
-==================================",
+══════════════════════════════════════",
         stack_frame
     );
     panic!("double fault occured")
@@ -70,9 +74,10 @@ extern "x86-interrupt" fn page_fault_handler(
         "CPU Exception:    #PF PAGE FAULT
 Accessed Address: {:?}
 Error Code:       {:?}
-=========== STACK FRAME ==========
+
+═╡ STACK FRAME ╞══════════════════════
 {:#?}
-==================================",
+══════════════════════════════════════",
         Cr2::read(),
         error_code,
         stack_frame
@@ -81,9 +86,10 @@ Error Code:       {:?}
         "CPU Exception:    #PF PAGE FAULT
 Accessed Address: {:?}
 Error Code:       {:?}
-=========== STACK FRAME ==========
+
+═╡ STACK FRAME ╞══════════════════════
 {:#?}
-==================================",
+══════════════════════════════════════",
         Cr2::read(),
         error_code,
         stack_frame

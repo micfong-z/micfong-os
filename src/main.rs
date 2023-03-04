@@ -9,6 +9,7 @@ fn main() {
     let mut cmd = std::process::Command::new("qemu-system-x86_64");
     if uefi {
         cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
+        println!("UEFI BIOS: {:#?}", ovmf_prebuilt::ovmf_pure_efi());
         cmd.arg("-drive").arg(format!("format=raw,file={uefi_path}"));
         println!("Running UEFI image: {}", uefi_path);
     } else {
@@ -22,3 +23,5 @@ fn main() {
         Err(_) => return (),
     };
 }
+
+// ./target/debug/build/micfong-os-e1db6608851c8a62/out/uefi.img
