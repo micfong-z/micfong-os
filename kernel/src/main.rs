@@ -19,7 +19,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     log_info!("Welcome to Micfong OS!");
     serial_println!("\n\nWelcome to Micfong OS!");
-    
+
     hlt_loop();
 }
 

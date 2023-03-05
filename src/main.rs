@@ -2,7 +2,7 @@ fn main() {
     // read env variables that were set in build script
     let uefi_path = env!("UEFI_PATH");
     let bios_path = env!("BIOS_PATH");
-    
+
     // choose whether to start the UEFI or BIOS image
     let uefi = true;
 
@@ -10,10 +10,12 @@ fn main() {
     if uefi {
         cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
         println!("UEFI BIOS: {:#?}", ovmf_prebuilt::ovmf_pure_efi());
-        cmd.arg("-drive").arg(format!("format=raw,file={uefi_path}"));
+        cmd.arg("-drive")
+            .arg(format!("format=raw,file={uefi_path}"));
         println!("Running UEFI image: {}", uefi_path);
     } else {
-        cmd.arg("-drive").arg(format!("format=raw,file={bios_path}"));
+        cmd.arg("-drive")
+            .arg(format!("format=raw,file={bios_path}"));
         println!("Running BIOS image: {}", bios_path);
     }
     cmd.arg("-serial").arg("stdio");
@@ -23,5 +25,3 @@ fn main() {
         Err(_) => return (),
     };
 }
-
-// ./target/debug/build/micfong-os-e1db6608851c8a62/out/uefi.img

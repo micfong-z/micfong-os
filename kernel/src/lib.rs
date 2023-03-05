@@ -13,13 +13,19 @@ pub mod unifont;
 
 pub fn init(framebuffer: &'static mut Optional<FrameBuffer>) {
     gdt::init();
-    interrupts::idt_init();
     graphics::painter_init(framebuffer);
     let screen_width = graphics::get_width();
     let screen_height = graphics::get_height();
     graphics::draw_rect(0, 0, screen_width, screen_height, 0x202020);
     log::logger_init(20, 4);
-    log_info!("Initialization completed");
+    log_info!("(done before logger init) GDT reloaded");
+    log_info!("(done before logger init) Graphics initialized");
+    log_trace!("-   Screen width: {}
+-   Screen height: {}", screen_width, screen_height);
+    log_info!("Logger initialized");
+    interrupts::idt_init();
+    log_info!("IDT reloaded");
+    log_info!("Initialization completed\n");
 }
 
 pub fn hlt_loop() -> ! {

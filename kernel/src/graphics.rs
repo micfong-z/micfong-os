@@ -42,14 +42,14 @@ impl Painter {
         let bytes_per_row = self.info.stride * self.info.bytes_per_pixel;
         let bytes_per_move = y * bytes_per_row;
         let bytes_to_move = (self.info.height - y) * bytes_per_row;
-    
+
         unsafe {
             let src = self.framebuffer.as_ptr().add(bytes_per_move);
             let dst = self.framebuffer.as_mut_ptr();
             core::ptr::copy(src, dst, bytes_to_move);
         }
     }
-    
+
     pub fn draw_pixel(&mut self, x: usize, y: usize, color: u32) {
         let offset = y * self.info.stride + x;
         let r = (color >> 16) as u8;
@@ -94,7 +94,7 @@ impl Painter {
                     for x in x..(x + width) {
                         let byte_offset = (offset + x) * bytes_per_pixel;
                         self.framebuffer[byte_offset] = r;
-                        self.framebuffer[byte_offset + 1] = g; 
+                        self.framebuffer[byte_offset + 1] = g;
                         self.framebuffer[byte_offset + 2] = b;
                     }
                 }
