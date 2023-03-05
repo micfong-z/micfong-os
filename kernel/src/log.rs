@@ -13,14 +13,13 @@ impl LockedLogger {
     }
 
     /// Force-unlocks the logger to prevent deadlocks.
-    /// 
+    ///
     /// ## Safety
     /// This method is unsafe and usage of it should be avoided.
     pub unsafe fn force_unlock(&self) {
         unsafe { self.0.force_unlock() };
     }
 }
-
 
 struct Logger {
     line_height: usize,
@@ -59,7 +58,13 @@ impl Logger {
 
     fn new_line(&mut self) {
         self.x = self.margin + self.indent * 8;
-        graphics::draw_rect(self.x, self.y + self.line_height, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
+        graphics::draw_rect(
+            self.x,
+            self.y + self.line_height,
+            graphics::get_width() - self.margin * 2,
+            self.line_height,
+            0x202020,
+        );
         let newy = self.y + self.line_height * 3;
         if newy > graphics::get_height() - self.margin {
             self.scroll_up();
@@ -72,7 +77,13 @@ impl Logger {
         // move everything up one line, and clear the last line
         graphics::move_all_up(self.line_height);
         // clear the last line
-        graphics::draw_rect(self.margin, graphics::get_height() - self.margin - self.line_height, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
+        graphics::draw_rect(
+            self.margin,
+            graphics::get_height() - self.margin - self.line_height,
+            graphics::get_width() - self.margin * 2,
+            self.line_height,
+            0x202020,
+        );
         // set the cursor to the last line
 
         // self.y = self.margin;

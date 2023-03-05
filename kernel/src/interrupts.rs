@@ -1,6 +1,7 @@
-use crate::{gdt, log_error, log_panic, log_warn, serial_println};
 use lazy_static::lazy_static;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+
+use crate::{gdt, log_error, log_panic, log_warn, serial_println};
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -61,8 +62,9 @@ extern "x86-interrupt" fn double_fault_handler(
     panic!("double fault occured")
 }
 
-use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
+
+use crate::hlt_loop;
 
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: InterruptStackFrame,

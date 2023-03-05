@@ -1,9 +1,12 @@
 #![no_std]
 #![no_main]
 
-use bootloader_api::config::{BootloaderConfig, Mapping};
-use bootloader_api::{entry_point, BootInfo};
 use core::panic::PanicInfo;
+
+use bootloader_api::{
+    config::{BootloaderConfig, Mapping},
+    entry_point, BootInfo,
+};
 use kernel::{hlt_loop, log, log_info, log_panic, serial_println};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {

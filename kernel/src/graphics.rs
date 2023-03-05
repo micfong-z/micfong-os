@@ -1,7 +1,8 @@
-use crate::unifont;
 use bootloader_api::info::{FrameBuffer, FrameBufferInfo, Optional, PixelFormat};
 use conquer_once::spin::OnceCell;
 use spin::Mutex;
+
+use crate::unifont;
 
 pub static PAINTER: OnceCell<LockedPainter> = OnceCell::uninit();
 pub struct LockedPainter(Mutex<Painter>);
