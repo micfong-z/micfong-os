@@ -31,6 +31,10 @@ impl Painter {
         Painter { framebuffer, info }
     }
 
+    pub fn get_framebuffer_address(&self) -> u64 {
+        self.framebuffer.as_ptr() as u64
+    }
+
     pub fn get_height(&self) -> usize {
         self.info.height
     }
@@ -44,6 +48,7 @@ impl Painter {
         let bytes_per_move = y * bytes_per_row;
         let bytes_to_move = (self.info.height - y) * bytes_per_row;
 
+        // this unsafe block should be fine since PAINTER is locked with a Mutex
         unsafe {
             let src = self.framebuffer.as_ptr().add(bytes_per_move);
             let dst = self.framebuffer.as_mut_ptr();
@@ -106,9 +111,7 @@ impl Painter {
 }
 
 pub fn move_all_up(y: usize) {
-    let painter = PAINTER.get().unwrap();
-    let mut painter = painter.0.lock();
-    painter.move_all_up(y);
+    PAINTER.get().unwrap().0.lock().move_all_up(y);
 }
 
 pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
@@ -252,4 +255,8 @@ pub fn get_char_width(c: char) -> usize {
         return glyph.get_width();
     }
     return 0;
+}
+
+pub fn get_framebuffer_addr() -> u64 {
+    PAINTER.get().unwrap().0.lock().get_framebuffer_address()
 }

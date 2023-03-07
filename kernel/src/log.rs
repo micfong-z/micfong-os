@@ -145,11 +145,11 @@ macro_rules! println {
 macro_rules! log_trace {
     () => {
         $crate::log::set_color(0xAAAAAA);
-        $crate::print!("[TRACE:]\n");
+        $crate::print!("[-TRACE]\n");
     };
     ($($arg:tt)*) => {
         $crate::log::set_color(0xAAAAAA);
-        $crate::print!("[TRACE:] ");
+        $crate::print!("[-TRACE] ");
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
         $crate::log::set_indent(0);
@@ -202,6 +202,23 @@ macro_rules! log_error {
         $crate::log::set_color(0xFA4B4B);
         $crate::print!("[ERROR!] ");
         $crate::log::set_color(0xFCA5A5);
+        $crate::log::set_indent(9);
+        $crate::print!("{}", format_args!($($arg)*));
+        $crate::log::set_indent(0);
+        $crate::print!("\n");
+    };
+}
+
+#[macro_export]
+macro_rules! log_ok {
+    () => {
+        $crate::log::set_color(0x12B76A);
+        $crate::print!("[  OK  ]\n");
+    };
+    ($($arg:tt)*) => {
+        $crate::log::set_color(0x12B76A);
+        $crate::print!("[  OK  ] ");
+        $crate::log::set_color(0xFFFFFF);
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
         $crate::log::set_indent(0);
