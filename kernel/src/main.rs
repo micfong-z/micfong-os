@@ -46,6 +46,11 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         interrupts::idt_init();
         log_info!("IDT reloaded");
 
+        unsafe { interrupts::PICS.lock().initialize() };
+        log_info!("PICs initialized");
+        x86_64::instructions::interrupts::enable();
+        log_info!("Interrupts enabled");
+
         let phys_mem_offset =
             VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
         let mut mapper = unsafe { memory::init_mapper(phys_mem_offset) };

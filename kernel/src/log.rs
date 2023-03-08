@@ -97,6 +97,18 @@ impl Logger {
     fn set_indent(&mut self, indent: usize) {
         self.indent = indent;
     }
+
+    fn backspace(&mut self) {
+        if self.x > self.margin {
+            self.x -= 8;
+            graphics::draw_rect(self.x, self.y, 8, self.line_height, 0x202020);
+        }
+    }
+}
+
+pub fn backspace() {
+    let mut logger = LOGGER.get().unwrap().0.lock();
+    logger.backspace();
 }
 
 pub fn logger_init(line_height: usize, margin: usize) {
@@ -127,7 +139,11 @@ pub fn set_indent(indent: usize) {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    LOGGER.get().unwrap().0.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+
+    interrupts::without_interrupts(|| {
+        LOGGER.get().unwrap().0.lock().write_fmt(args).unwrap();
+    });
 }
 
 #[macro_export]
