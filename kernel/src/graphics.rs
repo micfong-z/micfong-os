@@ -118,7 +118,7 @@ pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
     if let Optional::Some(framebuffer) = framebuffer {
         let info = framebuffer.info();
         let framebuffer = framebuffer.buffer_mut();
-        PAINTER.get_or_init(move || LockedPainter::new(framebuffer, info));
+        PAINTER.init_once(move || LockedPainter::new(framebuffer, info));
     }
 }
 
