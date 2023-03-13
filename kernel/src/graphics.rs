@@ -31,10 +31,6 @@ impl Painter {
         Painter { framebuffer, info }
     }
 
-    pub fn get_framebuffer_address(&self) -> u64 {
-        self.framebuffer.as_ptr() as u64
-    }
-
     pub fn get_height(&self) -> usize {
         self.info.height
     }
@@ -255,8 +251,4 @@ pub fn get_char_width(c: char) -> usize {
         return glyph.get_width();
     }
     return 0;
-}
-
-pub fn get_framebuffer_addr() -> u64 {
-    PAINTER.get().unwrap().0.lock().get_framebuffer_address()
 }
