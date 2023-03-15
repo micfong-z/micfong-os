@@ -1,7 +1,7 @@
 use conquer_once::spin::OnceCell;
 use spin::Mutex;
 
-use crate::graphics;
+use crate::{colors, graphics};
 
 pub static LOGGER: OnceCell<LockedLogger> = OnceCell::uninit();
 
@@ -101,7 +101,13 @@ impl Logger {
     fn backspace(&mut self) {
         if self.x > self.margin {
             self.x -= 8;
-            graphics::draw_rect(self.x, self.y, 8, self.line_height, 0x202020);
+            graphics::draw_rect(
+                self.x,
+                self.y,
+                8,
+                self.line_height,
+                colors::DESKTOP_BACKGROUND,
+            );
         }
     }
 }
@@ -160,11 +166,11 @@ macro_rules! println {
 #[macro_export]
 macro_rules! log_trace {
     () => {
-        $crate::log::set_color(0xAAAAAA);
+        $crate::log::set_color(colors::TRACE_LOG);
         $crate::print!("[-TRACE]\n");
     };
     ($($arg:tt)*) => {
-        $crate::log::set_color(0xAAAAAA);
+        $crate::log::set_color(colors::TRACE_LOG);
         $crate::print!("[-TRACE] ");
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
@@ -176,11 +182,11 @@ macro_rules! log_trace {
 #[macro_export]
 macro_rules! log_info {
     () => {
-        $crate::log::set_color(0xFFFFFF);
+        $crate::log::set_color(colors::WHITE);
         $crate::print!("[ INFO ]\n");
     };
     ($($arg:tt)*) => {
-        $crate::log::set_color(0xFFFFFF);
+        $crate::log::set_color(colors::WHITE);
         $crate::print!("[ INFO ] ");
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
@@ -192,13 +198,13 @@ macro_rules! log_info {
 #[macro_export]
 macro_rules! log_warn {
     () => {
-        $crate::log::set_color(0xFCBB13);
+        $crate::log::set_color(colors::YELLOW);
         $crate::print!("[ WARN ]\n");
     };
     ($($arg:tt)*) => {
-        $crate::log::set_color(0xFCBB13);
+        $crate::log::set_color(colors::YELLOW);
         $crate::print!("[ WARN ] ");
-        $crate::log::set_color(0xFDDD89);
+        $crate::log::set_color(colors::BRIGHT_YELLOW);
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
         $crate::log::set_indent(0);
@@ -209,15 +215,15 @@ macro_rules! log_warn {
 #[macro_export]
 macro_rules! log_error {
     () => {
-        $crate::log::set_color(0xFA4B4B);
+        $crate::log::set_color(colors::RED);
         $crate::log::set_indent(9);
         $crate::print!("[ERROR!]\n");
         $crate::log::set_indent(0);
     };
     ($($arg:tt)*) => {
-        $crate::log::set_color(0xFA4B4B);
+        $crate::log::set_color(colors::RED);
         $crate::print!("[ERROR!] ");
-        $crate::log::set_color(0xFCA5A5);
+        $crate::log::set_color(colors::BRIGHT_RED);
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
         $crate::log::set_indent(0);
@@ -228,13 +234,13 @@ macro_rules! log_error {
 #[macro_export]
 macro_rules! log_ok {
     () => {
-        $crate::log::set_color(0x12B76A);
+        $crate::log::set_color(colors::GREEN);
         $crate::print!("[  OK  ]\n");
     };
     ($($arg:tt)*) => {
-        $crate::log::set_color(0x12B76A);
+        $crate::log::set_color(colors::GREEN);
         $crate::print!("[  OK  ] ");
-        $crate::log::set_color(0xFFFFFF);
+        $crate::log::set_color(colors::WHITE);
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));
         $crate::log::set_indent(0);
@@ -245,13 +251,13 @@ macro_rules! log_ok {
 #[macro_export]
 macro_rules! log_panic {
     () => {
-        $crate::log::set_color(0xFA4B4B);
+        $crate::log::set_color(colors::RED);
         $crate::log::set_indent(9);
         $crate::print!("[PANIC!]\n");
         $crate::log::set_indent(0);
     };
     ($($arg:tt)*) => {
-        $crate::log::set_color(0xFA4B4B);
+        $crate::log::set_color(colors::RED);
         $crate::print!("[PANIC!] ");
         $crate::log::set_indent(9);
         $crate::print!("{}", format_args!($($arg)*));

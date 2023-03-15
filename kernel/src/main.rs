@@ -12,7 +12,7 @@ use bootloader_api::{
 use kernel::{
     allocator, gdt, graphics, hlt_loop, interrupts, log, log_info, log_panic, log_trace,
     memory::{self, BootInfoFrameAllocator},
-    println, serial_println, log_ok,
+    println, serial_println, log_ok, colors,
 };
 use x86_64::VirtAddr;
 
@@ -32,7 +32,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         graphics::painter_init(&mut boot_info.framebuffer);
         let screen_width = graphics::get_width();
         let screen_height = graphics::get_height();
-        graphics::draw_rect(0, 0, screen_width, screen_height, 0x202020);
+        graphics::draw_rect(0, 0, screen_width, screen_height, colors::DESKTOP_BACKGROUND);
         log::logger_init(20, 4);
         log_info!("(done before logger init) GDT reloaded");
         log_info!("(done before logger init) Graphics initialized");
