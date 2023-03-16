@@ -10,11 +10,11 @@ use bootloader_api::{
     entry_point, BootInfo,
 };
 use kernel::{
-    allocator, gdt, graphics, hlt_loop, interrupts, log, log_info, log_panic, log_trace,
+    allocator, gdt, graphics, interrupts, log, log_info, log_panic, log_trace,
     memory::{self, BootInfoFrameAllocator},
-    println, serial_println, log_ok, colors,
+    println, serial_println, log_ok, colors, keyboard,
 };
-use x86_64::VirtAddr;
+use x86_64::{VirtAddr, instructions};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -62,6 +62,10 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         allocator::init_heap(&mut mapper, &mut frame_allocator)
             .expect("heap initialization failed");
         log_info!("Heap initialized");
+
+        keyboard::init();
+        log_info!("Keyboard initialized");
+
         log_ok!("Kernel initialization done");
     }
 
@@ -69,7 +73,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     log_ok!("Welcome to Micfong OS!");
     serial_println!("\n\nWelcome to Micfong OS!");
 
-    hlt_loop();
+    loop {
+        instructions::interrupts::disable();
+        if let Some(_scancode) = keyboard::get_scancode() {
+            instructions::interrupts::enable();
+            // We will just dismiss this scancode for now
+        } else {
+            instructions::interrupts::enable_and_hlt();
+        }
+    }
 }
 
 /// This function is called when Rust panics.

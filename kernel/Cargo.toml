@@ -15,3 +15,8 @@ x86 = "0.52.0"
 linked_list_allocator = "0.10.5"
 pic8259 = "0.10.1"
 pc-keyboard = "0.7.0"
+
+[dependencies.crossbeam-queue]
+version = "0.2.1"
+default-features = false
+features = ["alloc"]

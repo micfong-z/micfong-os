@@ -19,6 +19,7 @@ pub mod memory;
 pub mod serial;
 pub mod unifont;
 pub mod colors;
+pub mod keyboard;
 
 pub fn hlt_loop() -> ! {
     loop {
