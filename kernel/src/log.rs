@@ -8,7 +8,7 @@ pub static LOGGER: OnceCell<LockedLogger> = OnceCell::uninit();
 pub struct LockedLogger(Mutex<Logger>);
 
 impl LockedLogger {
-    pub fn new(line_height: usize, margin: usize) -> Self {
+    pub fn new(line_height: u32, margin: u32) -> Self {
         LockedLogger(Mutex::new(Logger::new(line_height, margin)))
     }
 
@@ -22,16 +22,16 @@ impl LockedLogger {
 }
 
 struct Logger {
-    line_height: usize,
-    margin: usize,
-    x: usize,
-    y: usize,
+    line_height: u32,
+    margin: u32,
+    x: u32,
+    y: u32,
     color: u32,
-    indent: usize,
+    indent: u32,
 }
 
 impl Logger {
-    pub fn new(line_height: usize, margin: usize) -> Self {
+    pub fn new(line_height: u32, margin: u32) -> Self {
         Logger {
             line_height,
             margin,
@@ -94,7 +94,7 @@ impl Logger {
         self.color = color;
     }
 
-    fn set_indent(&mut self, indent: usize) {
+    fn set_indent(&mut self, indent: u32) {
         self.indent = indent;
     }
 
@@ -117,7 +117,7 @@ pub fn backspace() {
     logger.backspace();
 }
 
-pub fn logger_init(line_height: usize, margin: usize) {
+pub fn logger_init(line_height: u32, margin: u32) {
     LOGGER.init_once(|| LockedLogger::new(line_height, margin));
 }
 
@@ -138,7 +138,7 @@ pub fn set_color(color: u32) {
     logger.set_color(color);
 }
 
-pub fn set_indent(indent: usize) {
+pub fn set_indent(indent: u32) {
     let mut logger = LOGGER.get().unwrap().0.lock();
     logger.set_indent(indent);
 }

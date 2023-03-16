@@ -31,15 +31,16 @@ impl Painter {
         Painter { framebuffer, info }
     }
 
-    pub fn get_height(&self) -> usize {
-        self.info.height
+    pub fn get_height(&self) -> u32 {
+        self.info.height as u32
     }
 
-    pub fn get_width(&self) -> usize {
-        self.info.width
+    pub fn get_width(&self) -> u32 {
+        self.info.width as u32
     }
 
-    pub fn move_all_up(&mut self, y: usize) {
+    pub fn move_all_up(&mut self, y: u32) {
+        let y = y as usize;
         let bytes_per_row = self.info.stride * self.info.bytes_per_pixel;
         let bytes_per_move = y * bytes_per_row;
         let bytes_to_move = (self.info.height - y) * bytes_per_row;
@@ -52,7 +53,9 @@ impl Painter {
         }
     }
 
-    pub fn draw_pixel(&mut self, x: usize, y: usize, color: u32) {
+    pub fn draw_pixel(&mut self, x: u32, y: u32, color: u32) {
+        let x = x as usize;
+        let y = y as usize;
         let offset = y * self.info.stride + x;
         let r = (color >> 16) as u8;
         let g = (color >> 8) as u8;
@@ -73,7 +76,11 @@ impl Painter {
         };
     }
 
-    pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize, color: u32) {
+    pub fn draw_rect(&mut self, x: u32, y: u32, width: u32, height: u32, color: u32) {
+        let x = x as usize;
+        let y = y as usize;
+        let width = width as usize;
+        let height = height as usize;
         let r = (color >> 16) as u8;
         let g = (color >> 8) as u8;
         let b = color as u8;
@@ -106,7 +113,7 @@ impl Painter {
     }
 }
 
-pub fn move_all_up(y: usize) {
+pub fn move_all_up(y: u32) {
     PAINTER.get().unwrap().0.lock().move_all_up(y);
 }
 
@@ -118,26 +125,26 @@ pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
     }
 }
 
-pub fn draw_rect(x: usize, y: usize, width: usize, height: usize, color: u32) {
+pub fn draw_rect(x: u32, y: u32, width: u32, height: u32, color: u32) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     painter.draw_rect(x, y, width, height, color);
 }
 
-pub fn draw_pixel(x: usize, y: usize, color: u32) {
+pub fn draw_pixel(x: u32, y: u32, color: u32) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     painter.draw_pixel(x, y, color);
 }
 
-pub fn draw_char(x: usize, y: usize, c: char, color: u32) -> usize {
+pub fn draw_char(x: u32, y: u32, c: char, color: u32) -> u32 {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     if let Some(glyph) = unifont::get_glyph(c) {
-        let glyph_width = glyph.get_width();
+        let glyph_width = glyph.get_width() as u32;
         for i in 0..glyph_width {
-            for j in 0..16 {
-                if glyph.get_pixel(i, j) {
+            for j in 0..16u32 {
+                if glyph.get_pixel(i as usize, j as usize) {
                     painter.draw_pixel(x + i, y + j, color);
                 }
             }
@@ -147,18 +154,18 @@ pub fn draw_char(x: usize, y: usize, c: char, color: u32) -> usize {
     return 0;
 }
 
-pub fn draw_str(x: usize, y: usize, s: &str, color: u32) {
+pub fn draw_str(x: u32, y: u32, s: &str, color: u32) {
     let mut x = x;
     for c in s.chars() {
         x += draw_char(x, y, c, color);
     }
 }
 
-fn draw_line_low(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
+fn draw_line_low(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     let dx = x1 - x0;
-    let dy: usize;
+    let dy: u32;
     let inverse: bool;
     if y1 > y0 {
         dy = y1 - y0;
@@ -184,11 +191,11 @@ fn draw_line_low(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
     }
 }
 
-fn draw_line_high(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
+fn draw_line_high(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     let dy = y1 - y0;
-    let dx: usize;
+    let dx: u32;
     let inverse: bool;
     if x1 > x0 {
         dx = x1 - x0;
@@ -214,7 +221,7 @@ fn draw_line_high(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
     }
 }
 
-pub fn draw_line(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
+pub fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
     let dx = if x0 > x1 { x0 - x1 } else { x1 - x0 };
     let dy = if y0 > y1 { y0 - y1 } else { y1 - y0 };
     if x0 == x1 {
@@ -238,17 +245,17 @@ pub fn draw_line(x0: usize, y0: usize, x1: usize, y1: usize, color: u32) {
     }
 }
 
-pub fn get_height() -> usize {
+pub fn get_height() -> u32 {
     PAINTER.get().unwrap().0.lock().get_height()
 }
 
-pub fn get_width() -> usize {
+pub fn get_width() -> u32 {
     PAINTER.get().unwrap().0.lock().get_width()
 }
 
-pub fn get_char_width(c: char) -> usize {
+pub fn get_char_width(c: char) -> u32 {
     if let Some(glyph) = unifont::get_glyph(c) {
-        return glyph.get_width();
+        return glyph.get_width() as u32;
     }
     return 0;
 }

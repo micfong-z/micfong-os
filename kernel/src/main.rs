@@ -10,11 +10,13 @@ use bootloader_api::{
     entry_point, BootInfo,
 };
 use kernel::{
-    allocator, gdt, graphics, interrupts, log, log_info, log_panic, log_trace,
+    allocator, colors, gdt, graphics, interrupts,
+    keyboard::{self, MousePhase, MOUSE_STATUS},
+    log, log_info, log_ok, log_panic, log_trace,
     memory::{self, BootInfoFrameAllocator},
-    println, serial_println, log_ok, colors, keyboard,
+    print, println, serial_println,
 };
-use x86_64::{VirtAddr, instructions};
+use x86_64::{instructions, VirtAddr};
 
 pub static BOOTLOADER_CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -32,7 +34,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         graphics::painter_init(&mut boot_info.framebuffer);
         let screen_width = graphics::get_width();
         let screen_height = graphics::get_height();
-        graphics::draw_rect(0, 0, screen_width, screen_height, colors::DESKTOP_BACKGROUND);
+        graphics::draw_rect(
+            0,
+            0,
+            screen_width,
+            screen_height,
+            colors::DESKTOP_BACKGROUND,
+        );
         log::logger_init(20, 4);
         log_info!("(done before logger init) GDT reloaded");
         log_info!("(done before logger init) Graphics initialized");
@@ -64,7 +72,10 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         log_info!("Heap initialized");
 
         keyboard::init();
+        keyboard::init_kbc();
         log_info!("Keyboard initialized");
+
+        keyboard::enable_mouse();
 
         log_ok!("Kernel initialization done");
     }
@@ -75,11 +86,72 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     loop {
         instructions::interrupts::disable();
-        if let Some(_scancode) = keyboard::get_scancode() {
-            instructions::interrupts::enable();
-            // We will just dismiss this scancode for now
-        } else {
+        if keyboard::scancode_queues_empty() {
             instructions::interrupts::enable_and_hlt();
+        } else {
+            if let Some(scancode) = keyboard::get_keyboard_scancode() {
+                instructions::interrupts::enable();
+                log::set_color(colors::YELLOW);
+                print!("{:02X} ", scancode);
+            }
+            if let Some(scancode) = keyboard::get_mouse_scancode() {
+                instructions::interrupts::enable();
+
+                let mut mouse_status = MOUSE_STATUS.get().unwrap().lock();
+                match mouse_status.phase {
+                    MousePhase::Ack => {
+                        if scancode == 0xfa {
+                            mouse_status.phase = MousePhase::Byte1;
+                        }
+                    }
+                    MousePhase::Byte1 => {
+                        // Check if this is a valid byte
+                        if scancode & 0b1100_1000 == 0b0000_1000 {
+                            mouse_status.buffer[0] = scancode;
+                            mouse_status.phase = MousePhase::Byte2;
+                        }
+                    }
+                    MousePhase::Byte2 => {
+                        mouse_status.buffer[1] = scancode;
+                        mouse_status.phase = MousePhase::Byte3;
+                    }
+                    MousePhase::Byte3 => {
+                        mouse_status.buffer[2] = scancode;
+                        mouse_status.phase = MousePhase::Byte1;
+
+                        mouse_status.left_button = mouse_status.buffer[0] & 0b0000_0001 != 0;
+                        mouse_status.right_button = mouse_status.buffer[0] & 0b0000_0010 != 0;
+                        mouse_status.middle_button = mouse_status.buffer[0] & 0b0000_0100 != 0;
+
+                        mouse_status.x_delta = mouse_status.buffer[1] as i32;
+                        mouse_status.y_delta = mouse_status.buffer[2] as i32;
+                        if mouse_status.buffer[0] & 0b0001_0000 != 0 {
+                            mouse_status.x_delta -= 256;
+                        }
+                        if mouse_status.buffer[0] & 0b0010_0000 != 0 {
+                            mouse_status.y_delta -= 256;
+                        }
+                        mouse_status.y_delta = -mouse_status.y_delta;
+
+                        mouse_status.x_pos += mouse_status.x_delta;
+                        mouse_status.y_pos += mouse_status.y_delta;
+                        mouse_status.x_pos = mouse_status
+                            .x_pos
+                            .max(0)
+                            .min((graphics::get_width() - 1) as i32);
+                        mouse_status.y_pos = mouse_status
+                            .y_pos
+                            .max(0)
+                            .min((graphics::get_height() - 1) as i32);
+
+                        graphics::draw_pixel(
+                            mouse_status.x_pos as u32,
+                            mouse_status.y_pos as u32,
+                            colors::ORANGE,
+                        );
+                    }
+                }
+            }
         }
     }
 }
