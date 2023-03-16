@@ -2,7 +2,10 @@ use bootloader_api::info::{FrameBuffer, FrameBufferInfo, Optional, PixelFormat};
 use conquer_once::spin::OnceCell;
 use spin::Mutex;
 
-use crate::unifont;
+use crate::{
+    colors::{self, Color},
+    log_error, unifont,
+};
 
 pub static PAINTER: OnceCell<LockedPainter> = OnceCell::uninit();
 pub struct LockedPainter(Mutex<Painter>);
@@ -53,13 +56,16 @@ impl Painter {
         }
     }
 
-    pub fn draw_pixel(&mut self, x: u32, y: u32, color: u32) {
+    pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
         let x = x as usize;
         let y = y as usize;
+        if x >= self.info.width || y >= self.info.height || color.a == 0.0 {
+            return;
+        }
         let offset = y * self.info.stride + x;
-        let r = (color >> 16) as u8;
-        let g = (color >> 8) as u8;
-        let b = color as u8;
+        let r = color.r;
+        let g = color.g;
+        let b = color.b;
         let bytes_per_pixel = self.info.bytes_per_pixel;
         match self.info.pixel_format {
             PixelFormat::Bgr => {
@@ -76,14 +82,23 @@ impl Painter {
         };
     }
 
-    pub fn draw_rect(&mut self, x: u32, y: u32, width: u32, height: u32, color: u32) {
+    pub fn draw_rect(&mut self, x: u32, y: u32, mut width: u32, mut height: u32, color: Color) {
+        if color.a == 0.0 {
+            return;
+        }
+        if x + width >= (self.info.width as u32) {
+            width = (self.info.width as u32) - x;
+        }
+        if y + height >= (self.info.height as u32) {
+            height = (self.info.height as u32) - y;
+        }
         let x = x as usize;
         let y = y as usize;
         let width = width as usize;
         let height = height as usize;
-        let r = (color >> 16) as u8;
-        let g = (color >> 8) as u8;
-        let b = color as u8;
+        let r = color.r;
+        let g = color.g;
+        let b = color.b;
         let bytes_per_pixel = self.info.bytes_per_pixel;
         match self.info.pixel_format {
             PixelFormat::Bgr => {
@@ -125,43 +140,52 @@ pub fn painter_init(framebuffer: &'static mut Optional<FrameBuffer>) {
     }
 }
 
-pub fn draw_rect(x: u32, y: u32, width: u32, height: u32, color: u32) {
-    let painter = PAINTER.get().unwrap();
-    let mut painter = painter.0.lock();
-    painter.draw_rect(x, y, width, height, color);
+pub fn draw_rect(x: u32, y: u32, width: u32, height: u32, color: Color) {
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        let painter = PAINTER.get().unwrap();
+        let mut painter = painter.0.lock();
+        painter.draw_rect(x, y, width, height, color);
+    });
 }
 
-pub fn draw_pixel(x: u32, y: u32, color: u32) {
-    let painter = PAINTER.get().unwrap();
-    let mut painter = painter.0.lock();
-    painter.draw_pixel(x, y, color);
+pub fn draw_pixel(x: u32, y: u32, color: Color) {
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        let painter = PAINTER.get().unwrap();
+        let mut painter = painter.0.lock();
+        painter.draw_pixel(x, y, color);
+    });
 }
 
-pub fn draw_char(x: u32, y: u32, c: char, color: u32) -> u32 {
-    let painter = PAINTER.get().unwrap();
-    let mut painter = painter.0.lock();
-    if let Some(glyph) = unifont::get_glyph(c) {
-        let glyph_width = glyph.get_width() as u32;
-        for i in 0..glyph_width {
-            for j in 0..16u32 {
-                if glyph.get_pixel(i as usize, j as usize) {
-                    painter.draw_pixel(x + i, y + j, color);
+pub fn draw_char(x: u32, y: u32, c: char, color: Color) -> u32 {
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        let painter = PAINTER.get().unwrap();
+        let mut painter = painter.0.lock();
+        if let Some(glyph) = unifont::get_glyph(c) {
+            let glyph_width = glyph.get_width() as u32;
+            for i in 0..glyph_width {
+                for j in 0..16u32 {
+                    if glyph.get_pixel(i as usize, j as usize) {
+                        painter.draw_pixel(x + i, y + j, color);
+                    }
                 }
             }
+            return glyph_width;
         }
-        return glyph_width;
-    }
-    return 0;
+        return 0;
+    })
 }
 
-pub fn draw_str(x: u32, y: u32, s: &str, color: u32) {
+pub fn draw_str(x: u32, y: u32, s: &str, color: Color) {
     let mut x = x;
     for c in s.chars() {
         x += draw_char(x, y, c, color);
     }
 }
 
-fn draw_line_low(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
+fn draw_line_low(x0: u32, y0: u32, x1: u32, y1: u32, color: Color) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     let dx = x1 - x0;
@@ -191,7 +215,7 @@ fn draw_line_low(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
     }
 }
 
-fn draw_line_high(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
+fn draw_line_high(x0: u32, y0: u32, x1: u32, y1: u32, color: Color) {
     let painter = PAINTER.get().unwrap();
     let mut painter = painter.0.lock();
     let dy = y1 - y0;
@@ -221,28 +245,31 @@ fn draw_line_high(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
     }
 }
 
-pub fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, color: u32) {
-    let dx = if x0 > x1 { x0 - x1 } else { x1 - x0 };
-    let dy = if y0 > y1 { y0 - y1 } else { y1 - y0 };
-    if x0 == x1 {
-        draw_rect(x0, y0, 1, dy + 1, color);
-    } else if y0 == y1 {
-        draw_rect(x0, y0, dx + 1, 1, color);
-    } else {
-        if dy < dx {
-            if x0 > x1 {
-                draw_line_low(x1, y1, x0, y0, color);
-            } else {
-                draw_line_low(x0, y0, x1, y1, color);
-            }
+pub fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, color: Color) {
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        let dx = if x0 > x1 { x0 - x1 } else { x1 - x0 };
+        let dy = if y0 > y1 { y0 - y1 } else { y1 - y0 };
+        if x0 == x1 {
+            draw_rect(x0, y0, 1, dy + 1, color);
+        } else if y0 == y1 {
+            draw_rect(x0, y0, dx + 1, 1, color);
         } else {
-            if y0 > y1 {
-                draw_line_high(x1, y1, x0, y0, color);
+            if dy < dx {
+                if x0 > x1 {
+                    draw_line_low(x1, y1, x0, y0, color);
+                } else {
+                    draw_line_low(x0, y0, x1, y1, color);
+                }
             } else {
-                draw_line_high(x0, y0, x1, y1, color);
+                if y0 > y1 {
+                    draw_line_high(x1, y1, x0, y0, color);
+                } else {
+                    draw_line_high(x0, y0, x1, y1, color);
+                }
             }
         }
-    }
+    });
 }
 
 pub fn get_height() -> u32 {
@@ -258,4 +285,21 @@ pub fn get_char_width(c: char) -> u32 {
         return glyph.get_width() as u32;
     }
     return 0;
+}
+
+pub fn draw_bitmap(x: u32, y: u32, width: u32, height: u32, bitmap: &[Color]) {
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        let painter = PAINTER.get().unwrap();
+        let mut painter = painter.0.lock();
+        if width * height != bitmap.len() as u32 {
+            log_error!("Bitmap size does not match width and height");
+            return;
+        }
+        for i in 0..width {
+            for j in 0..height {
+                painter.draw_pixel(x + i, y + j, bitmap[(j * width + i) as usize]);
+            }
+        }
+    });
 }

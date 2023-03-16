@@ -3,7 +3,7 @@ use pic8259::ChainedPics;
 use spin::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
-use crate::{colors, gdt, keyboard, log_error, log_panic, log_warn, serial_println};
+use crate::{colors, gdt, keyboard, log_error, log_panic, log_warn, serial_println, graphics::PAINTER};
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
@@ -95,7 +95,7 @@ extern "x86-interrupt" fn mouse_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
-    log_warn!(
+    serial_println!(
         "CPU Exception:    BREAKPOINT (int 0x3)
 
 ═╡ STACK FRAME ╞══════════════════════
@@ -103,7 +103,7 @@ extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
 ══════════════════════════════════════",
         stack_frame
     );
-    serial_println!(
+    log_warn!(
         "CPU Exception:    BREAKPOINT (int 0x3)
 
 ═╡ STACK FRAME ╞══════════════════════
@@ -117,7 +117,7 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
-    log_panic!(
+    serial_println!(
         "CPU Exception:    #DF DOUBLE FAULT (int 0x8)
 
 ═╡ STACK FRAME ╞══════════════════════
@@ -125,7 +125,10 @@ extern "x86-interrupt" fn double_fault_handler(
 ══════════════════════════════════════",
         stack_frame
     );
-    serial_println!(
+    unsafe {
+        PAINTER.get().unwrap().force_unlock();
+    }
+    log_panic!(
         "CPU Exception:    #DF DOUBLE FAULT (int 0x8)
 
 ═╡ STACK FRAME ╞══════════════════════
@@ -146,7 +149,7 @@ extern "x86-interrupt" fn page_fault_handler(
 ) {
     use x86_64::registers::control::Cr2;
 
-    log_error!(
+    serial_println!(
         "CPU Exception:    #PF PAGE FAULT
 Accessed Address: {:?}
 Error Code:       {:?}
@@ -158,7 +161,10 @@ Error Code:       {:?}
         error_code,
         stack_frame
     );
-    serial_println!(
+    unsafe {
+        PAINTER.get().unwrap().force_unlock();
+    }
+    log_error!(
         "CPU Exception:    #PF PAGE FAULT
 Accessed Address: {:?}
 Error Code:       {:?}

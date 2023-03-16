@@ -20,6 +20,7 @@ pub mod serial;
 pub mod unifont;
 pub mod colors;
 pub mod keyboard;
+pub mod bitmap;
 
 pub fn hlt_loop() -> ! {
     loop {

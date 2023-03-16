@@ -10,7 +10,7 @@ use bootloader_api::{
     entry_point, BootInfo,
 };
 use kernel::{
-    allocator, colors, gdt, graphics, interrupts,
+    allocator, bitmap, colors, gdt, graphics, interrupts,
     keyboard::{self, MousePhase, MOUSE_STATUS},
     log, log_info, log_ok, log_panic, log_trace,
     memory::{self, BootInfoFrameAllocator},
@@ -133,6 +133,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                         }
                         mouse_status.y_delta = -mouse_status.y_delta;
 
+                        let old_x = mouse_status.x_pos;
+                        let old_y = mouse_status.y_pos;
+
                         mouse_status.x_pos += mouse_status.x_delta;
                         mouse_status.y_pos += mouse_status.y_delta;
                         mouse_status.x_pos = mouse_status
@@ -144,10 +147,19 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                             .max(0)
                             .min((graphics::get_height() - 1) as i32);
 
-                        graphics::draw_pixel(
+                        graphics::draw_rect(
+                            old_x as u32,
+                            old_y as u32,
+                            13,
+                            19,
+                            colors::DESKTOP_BACKGROUND,
+                        );
+                        graphics::draw_bitmap(
                             mouse_status.x_pos as u32,
                             mouse_status.y_pos as u32,
-                            colors::ORANGE,
+                            13,
+                            19,
+                            &bitmap::MOUSE_CURSOR,
                         );
                     }
                 }

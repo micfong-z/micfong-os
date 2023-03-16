@@ -1,7 +1,7 @@
 use conquer_once::spin::OnceCell;
 use spin::Mutex;
 
-use crate::{colors, graphics};
+use crate::{colors::{self, Color}, graphics};
 
 pub static LOGGER: OnceCell<LockedLogger> = OnceCell::uninit();
 
@@ -26,7 +26,7 @@ struct Logger {
     margin: u32,
     x: u32,
     y: u32,
-    color: u32,
+    color: Color,
     indent: u32,
 }
 
@@ -37,7 +37,7 @@ impl Logger {
             margin,
             x: margin,
             y: margin,
-            color: 0xFFFFFF,
+            color: colors::WHITE,
             indent: 0,
         }
     }
@@ -63,7 +63,7 @@ impl Logger {
             self.y + self.line_height,
             graphics::get_width() - self.margin * 2,
             self.line_height,
-            0x202020,
+            colors::DESKTOP_BACKGROUND,
         );
         let newy = self.y + self.line_height * 3;
         if newy > graphics::get_height() - self.margin {
@@ -82,7 +82,7 @@ impl Logger {
             graphics::get_height() - self.margin - self.line_height,
             graphics::get_width() - self.margin * 2,
             self.line_height,
-            0x202020,
+            colors::DESKTOP_BACKGROUND,
         );
         // set the cursor to the last line
 
@@ -90,7 +90,7 @@ impl Logger {
         // graphics::draw_rect(self.x, self.margin, graphics::get_width() - self.margin * 2, self.line_height, 0x202020);
     }
 
-    fn set_color(&mut self, color: u32) {
+    fn set_color(&mut self, color: Color) {
         self.color = color;
     }
 
@@ -133,7 +133,7 @@ impl fmt::Write for Logger {
     }
 }
 
-pub fn set_color(color: u32) {
+pub fn set_color(color: Color) {
     let mut logger = LOGGER.get().unwrap().0.lock();
     logger.set_color(color);
 }
