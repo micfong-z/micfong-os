@@ -21,6 +21,7 @@ fn main() {
         println!("Running BIOS image: {}", bios_path);
     }
     cmd.arg("-serial").arg("stdio");
+    cmd.arg("-m").arg("512M");
     let Ok(mut child) = cmd.spawn() else { return () };
     match child.wait() {
         Ok(it) => it,

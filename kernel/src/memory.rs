@@ -23,6 +23,7 @@ pub unsafe fn init_mapper(physical_memory_offset: VirtAddr) -> OffsetPageTable<'
 pub struct BootInfoFrameAllocator {
     memory_regions: &'static MemoryRegions,
     next: usize,
+    last_access: usize,
 }
 
 impl BootInfoFrameAllocator {
@@ -30,15 +31,17 @@ impl BootInfoFrameAllocator {
         BootInfoFrameAllocator {
             memory_regions,
             next: 0,
+            last_access: 0,
         }
     }
 
-    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
-        let regions = self.memory_regions.iter();
-        let usable_regions = regions.filter(|r| r.kind == MemoryRegionKind::Usable);
-        let addr_ranges = usable_regions.map(|r| r.start..r.end);
-        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
-        frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    pub fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+        self.memory_regions
+            .iter()
+            .filter(|r| r.kind == MemoryRegionKind::Usable)
+            .map(|r| r.start..r.end)
+            .flat_map(|r| r.step_by(4096))
+            .map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
 }
 
@@ -46,6 +49,15 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
         self.next += 1;
+        frame
+    }
+}
+
+impl BootInfoFrameAllocator {
+    pub fn allocate_frame_with_iter(&mut self, iter: &mut impl Iterator<Item = PhysFrame>) -> Option<PhysFrame> {
+        let frame = iter.nth(self.next - self.last_access);
+        self.next += 1;
+        self.last_access = self.next;
         frame
     }
 }

@@ -12,9 +12,10 @@ use bootloader_api::{
 use kernel::{
     allocator, bitmap, colors, gdt, graphics, interrupts,
     keyboard::{self, MousePhase, MOUSE_STATUS},
+    layer::{self, Layer, LAYER_CONTROLLER},
     log, log_info, log_ok, log_panic, log_trace,
     memory::{self, BootInfoFrameAllocator},
-    print, println, serial_println,
+    print, serial_println,
 };
 use x86_64::{instructions, VirtAddr};
 
@@ -67,6 +68,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
         log_info!("Frame allocator initialized");
 
+        log_info!("Initializing heap...");
         allocator::init_heap(&mut mapper, &mut frame_allocator)
             .expect("heap initialization failed");
         log_info!("Heap initialized");
@@ -76,13 +78,39 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         log_info!("Keyboard initialized");
 
         keyboard::enable_mouse();
+        log_info!("Mouse initialized");
+
+        layer::init();
+        log_info!("Layer manager initialized");
 
         log_ok!("Kernel initialization done");
     }
 
-    println!();
     log_ok!("Welcome to Micfong OS!");
     serial_println!("\n\nWelcome to Micfong OS!");
+
+    let screen_width = graphics::get_width();
+    let screen_height = graphics::get_height();
+
+    let mut background_layer = Layer::new(screen_width, screen_height, 0, 0, 0);
+    background_layer.draw_rect(
+        0,
+        0,
+        screen_width,
+        screen_height,
+        colors::DESKTOP_BACKGROUND,
+    );
+    background_layer.draw_rect(20, 20, 120, 120, colors::ORANGE);
+
+    let mut mouse_cursor_layer = Layer::new(13, 19, screen_width / 2, screen_height / 2, 10);
+    mouse_cursor_layer.draw_bitmap(0, 0, 13, 19, &bitmap::MOUSE_CURSOR);
+
+    layer::add_layer(background_layer);
+    let mouse_cursor_layer = layer::add_layer(mouse_cursor_layer);
+
+    let layer_controller = LAYER_CONTROLLER.get().unwrap().lock();
+
+    layer_controller.render();
 
     loop {
         instructions::interrupts::disable();
@@ -133,9 +161,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                         }
                         mouse_status.y_delta = -mouse_status.y_delta;
 
-                        let old_x = mouse_status.x_pos;
-                        let old_y = mouse_status.y_pos;
-
                         mouse_status.x_pos += mouse_status.x_delta;
                         mouse_status.y_pos += mouse_status.y_delta;
                         mouse_status.x_pos = mouse_status
@@ -147,20 +172,10 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                             .max(0)
                             .min((graphics::get_height() - 1) as i32);
 
-                        graphics::draw_rect(
-                            old_x as u32,
-                            old_y as u32,
-                            13,
-                            19,
-                            colors::DESKTOP_BACKGROUND,
-                        );
-                        graphics::draw_bitmap(
-                            mouse_status.x_pos as u32,
-                            mouse_status.y_pos as u32,
-                            13,
-                            19,
-                            &bitmap::MOUSE_CURSOR,
-                        );
+                        mouse_cursor_layer
+                            .lock()
+                            .set_pos(mouse_status.x_pos as u32, mouse_status.y_pos as u32);
+                        layer_controller.render();
                     }
                 }
             }
