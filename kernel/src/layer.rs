@@ -145,6 +145,10 @@ impl LayerController {
         graphics::layer_controller_render(&self);
     }
 
+    pub fn render_partial(&self, x: u32, y: u32, width: u32, height: u32) {
+        graphics::layer_controller_render_partial(&self, x, y, width, height);
+    }
+
     pub fn get_layers_iter(&self) -> impl Iterator<Item = &Arc<Mutex<Layer>>> {
         self.layers.iter()
     }

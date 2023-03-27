@@ -161,6 +161,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                         }
                         mouse_status.y_delta = -mouse_status.y_delta;
 
+                        let old_x = mouse_status.x_pos as u32;
+                        let old_y = mouse_status.y_pos as u32;
+
                         mouse_status.x_pos += mouse_status.x_delta;
                         mouse_status.y_pos += mouse_status.y_delta;
                         mouse_status.x_pos = mouse_status
@@ -175,7 +178,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                         mouse_cursor_layer
                             .lock()
                             .set_pos(mouse_status.x_pos as u32, mouse_status.y_pos as u32);
-                        layer_controller.render();
+                        layer_controller.render_partial(old_x, old_y, 13, 19);
+                        layer_controller.render_partial(
+                            mouse_status.x_pos as u32,
+                            mouse_status.y_pos as u32,
+                            13,
+                            19,
+                        );
                     }
                 }
             }

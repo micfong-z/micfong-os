@@ -143,8 +143,11 @@ impl Painter {
                 PixelFormat::Bgr => {
                     for y in 0..height {
                         let offset = (y_pos + y) * self.info.stride;
+                        if  y_pos + y >= self.info.height {
+                            break;
+                        }
                         for x in 0..width {
-                            if (framebuffer[y * width + x].a as f32) == 0.0 {
+                            if (framebuffer[y * width + x].a as f32) == 0.0 || x_pos + x >= self.info.width {
                                 continue;
                             }
                             let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
@@ -158,8 +161,93 @@ impl Painter {
                 PixelFormat::Rgb => {
                     for y in 0..height {
                         let offset = (y_pos + y) * self.info.stride;
+                        if  y_pos + y >= self.info.height {
+                            break;
+                        }
                         for x in 0..width {
-                            if (framebuffer[y * width + x].a as f32) == 0.0 {
+                            if (framebuffer[y * width + x].a as f32) == 0.0 || x_pos + x >= self.info.width {
+                                continue;
+                            }
+                            let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
+                            let color = framebuffer[y * width + x];
+                            self.framebuffer[byte_offset] = color.r;
+                            self.framebuffer[byte_offset + 1] = color.g;
+                            self.framebuffer[byte_offset + 2] = color.b;
+                        }
+                    }
+                }
+                other => panic!("Unsupported pixel format: {:?}", other),
+            };
+        }
+    }
+
+    pub fn layer_controller_render_partial(
+        &mut self,
+        layer_controller: &layer::LayerController,
+        viewport_x: u32,
+        viewport_y: u32,
+        width: u32,
+        height: u32,
+    ) {
+        for layer in layer_controller.get_layers_iter() {
+            let layer = layer.lock();
+            if layer.is_hidden() {
+                continue;
+            }
+
+            let (x_pos, y_pos) = layer.get_pos_usize();
+            let crop_x = viewport_x as usize;
+            let crop_y = viewport_y as usize;
+            let crop_width = width as usize;
+            let crop_height = height as usize;
+
+            let width = layer.get_width() as usize;
+            let height = layer.get_height() as usize;
+            let framebuffer = layer.get_framebuffer();
+
+            match self.info.pixel_format {
+                PixelFormat::Bgr => {
+                    for y in 0..height {
+                        let offset = (y_pos + y) * self.info.stride;
+                        let screen_y = y + y_pos;
+                        if screen_y < crop_y || screen_y >= crop_y + crop_height {
+                            continue;
+                        }
+                        if screen_y >= self.info.height {
+                            break;
+                        }
+                        for x in 0..width {
+                            let screen_x = x + x_pos;
+                            if screen_x < crop_x || screen_x >= crop_x + crop_width {
+                                continue;
+                            }
+                            if (framebuffer[y * width + x].a as f32) == 0.0 || screen_x >= self.info.width {
+                                continue;
+                            }
+                            let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
+                            let color = framebuffer[y * width + x];
+                            self.framebuffer[byte_offset] = color.b;
+                            self.framebuffer[byte_offset + 1] = color.g;
+                            self.framebuffer[byte_offset + 2] = color.r;
+                        }
+                    }
+                }
+                PixelFormat::Rgb => {
+                    for y in 0..height {
+                        let offset = (y_pos + y) * self.info.stride;
+                        let screen_y = y + y_pos;
+                        if screen_y < crop_y || screen_y >= crop_y + crop_height {
+                            continue;
+                        }
+                        if screen_y >= self.info.height {
+                            break;
+                        }
+                        for x in 0..width {
+                            let screen_x = x + x_pos;
+                            if screen_x < crop_x || screen_x >= crop_x + crop_width {
+                                continue;
+                            }
+                            if (framebuffer[y * width + x].a as f32) == 0.0 || screen_x >= self.info.width {
                                 continue;
                             }
                             let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
@@ -358,5 +446,20 @@ pub fn layer_controller_render(layer_controller: &layer::LayerController) {
         let painter = PAINTER.get().unwrap();
         let mut painter = painter.0.lock();
         painter.layer_controller_render(layer_controller);
+    });
+}
+
+pub fn layer_controller_render_partial(
+    layer_controller: &layer::LayerController,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) {
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        let painter = PAINTER.get().unwrap();
+        let mut painter = painter.0.lock();
+        painter.layer_controller_render_partial(layer_controller, x, y, width, height);
     });
 }
