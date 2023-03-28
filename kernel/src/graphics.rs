@@ -143,11 +143,13 @@ impl Painter {
                 PixelFormat::Bgr => {
                     for y in 0..height {
                         let offset = (y_pos + y) * self.info.stride;
-                        if  y_pos + y >= self.info.height {
+                        if y_pos + y >= self.info.height {
                             break;
                         }
                         for x in 0..width {
-                            if (framebuffer[y * width + x].a as f32) == 0.0 || x_pos + x >= self.info.width {
+                            if (framebuffer[y * width + x].a as f32) == 0.0
+                                || x_pos + x >= self.info.width
+                            {
                                 continue;
                             }
                             let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
@@ -161,11 +163,13 @@ impl Painter {
                 PixelFormat::Rgb => {
                     for y in 0..height {
                         let offset = (y_pos + y) * self.info.stride;
-                        if  y_pos + y >= self.info.height {
+                        if y_pos + y >= self.info.height {
                             break;
                         }
                         for x in 0..width {
-                            if (framebuffer[y * width + x].a as f32) == 0.0 || x_pos + x >= self.info.width {
+                            if (framebuffer[y * width + x].a as f32) == 0.0
+                                || x_pos + x >= self.info.width
+                            {
                                 continue;
                             }
                             let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
@@ -184,10 +188,10 @@ impl Painter {
     pub fn layer_controller_render_partial(
         &mut self,
         layer_controller: &layer::LayerController,
-        viewport_x: u32,
-        viewport_y: u32,
-        width: u32,
-        height: u32,
+        render_x: u32,
+        render_y: u32,
+        render_width: u32,
+        render_height: u32,
     ) {
         for layer in layer_controller.get_layers_iter() {
             let layer = layer.lock();
@@ -195,37 +199,42 @@ impl Painter {
                 continue;
             }
 
-            let (x_pos, y_pos) = layer.get_pos_usize();
-            let crop_x = viewport_x as usize;
-            let crop_y = viewport_y as usize;
-            let crop_width = width as usize;
-            let crop_height = height as usize;
+            let render_x = render_x as usize;
+            let render_y = render_y as usize;
+            let render_width = render_width as usize;
+            let render_height = render_height as usize;
 
-            let width = layer.get_width() as usize;
-            let height = layer.get_height() as usize;
+            let (layer_x, layer_y) = layer.get_pos_usize();
+            let layer_width = layer.get_width() as usize;
+            let layer_height = layer.get_height() as usize;
             let framebuffer = layer.get_framebuffer();
+
+            let r_layer_x0 = render_x.saturating_sub(layer_x);
+            let r_layer_y0 = render_y.saturating_sub(layer_y);
+            let r_layer_x1 = (render_x + render_width)
+                .saturating_sub(layer_x)
+                .min(layer_width);
+            let r_layer_y1 = (render_y + render_height)
+                .saturating_sub(layer_y)
+                .min(layer_height);
 
             match self.info.pixel_format {
                 PixelFormat::Bgr => {
-                    for y in 0..height {
-                        let offset = (y_pos + y) * self.info.stride;
-                        let screen_y = y + y_pos;
-                        if screen_y < crop_y || screen_y >= crop_y + crop_height {
-                            continue;
-                        }
+                    for y in r_layer_y0..r_layer_y1 {
+                        let offset = (layer_y + y) * self.info.stride;
+                        let screen_y = y + layer_y;
                         if screen_y >= self.info.height {
                             break;
                         }
-                        for x in 0..width {
-                            let screen_x = x + x_pos;
-                            if screen_x < crop_x || screen_x >= crop_x + crop_width {
+                        for x in r_layer_x0..r_layer_x1 {
+                            let screen_x = x + layer_x;
+                            if (framebuffer[y * layer_width + x].a as f32) == 0.0
+                                || screen_x >= self.info.width
+                            {
                                 continue;
                             }
-                            if (framebuffer[y * width + x].a as f32) == 0.0 || screen_x >= self.info.width {
-                                continue;
-                            }
-                            let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
-                            let color = framebuffer[y * width + x];
+                            let byte_offset = (offset + layer_x + x) * self.info.bytes_per_pixel;
+                            let color = framebuffer[y * layer_width + x];
                             self.framebuffer[byte_offset] = color.b;
                             self.framebuffer[byte_offset + 1] = color.g;
                             self.framebuffer[byte_offset + 2] = color.r;
@@ -233,25 +242,21 @@ impl Painter {
                     }
                 }
                 PixelFormat::Rgb => {
-                    for y in 0..height {
-                        let offset = (y_pos + y) * self.info.stride;
-                        let screen_y = y + y_pos;
-                        if screen_y < crop_y || screen_y >= crop_y + crop_height {
-                            continue;
-                        }
+                    for y in r_layer_y0..r_layer_y1 {
+                        let offset = (layer_y + y) * self.info.stride;
+                        let screen_y = y + layer_y;
                         if screen_y >= self.info.height {
                             break;
                         }
-                        for x in 0..width {
-                            let screen_x = x + x_pos;
-                            if screen_x < crop_x || screen_x >= crop_x + crop_width {
+                        for x in r_layer_x0..r_layer_x1 {
+                            let screen_x = x + layer_x;
+                            if (framebuffer[y * layer_width + x].a as f32) == 0.0
+                                || screen_x >= self.info.width
+                            {
                                 continue;
                             }
-                            if (framebuffer[y * width + x].a as f32) == 0.0 || screen_x >= self.info.width {
-                                continue;
-                            }
-                            let byte_offset = (offset + x_pos + x) * self.info.bytes_per_pixel;
-                            let color = framebuffer[y * width + x];
+                            let byte_offset = (offset + layer_x + x) * self.info.bytes_per_pixel;
+                            let color = framebuffer[y * layer_width + x];
                             self.framebuffer[byte_offset] = color.r;
                             self.framebuffer[byte_offset + 1] = color.g;
                             self.framebuffer[byte_offset + 2] = color.b;
