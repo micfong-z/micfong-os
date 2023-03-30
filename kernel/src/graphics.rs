@@ -1,3 +1,5 @@
+use alloc::vec;
+
 use bootloader_api::info::{FrameBuffer, FrameBufferInfo, Optional, PixelFormat};
 use conquer_once::spin::OnceCell;
 use spin::Mutex;
@@ -193,7 +195,9 @@ impl Painter {
         render_width: u32,
         render_height: u32,
     ) {
-        for layer in layer_controller.get_layers_iter() {
+        let mut rendered = vec![false; (render_width * render_height) as usize];
+        let mut render_cnt = 0;
+        for layer in layer_controller.get_layers_iter_rev() {
             let layer = layer.lock();
             if layer.is_hidden() {
                 continue;
@@ -203,6 +207,7 @@ impl Painter {
             let render_y = render_y as usize;
             let render_width = render_width as usize;
             let render_height = render_height as usize;
+            let total_render = render_width * render_height;
 
             let (layer_x, layer_y) = layer.get_pos_usize();
             let layer_width = layer.get_width() as usize;
@@ -230,14 +235,23 @@ impl Painter {
                             let screen_x = x + layer_x;
                             if (framebuffer[y * layer_width + x].a as f32) == 0.0
                                 || screen_x >= self.info.width
+                                || rendered
+                                    [(screen_y - render_y) * render_width + (screen_x - render_x)]
                             {
                                 continue;
                             }
+                            rendered
+                                [(screen_y - render_y) * render_width + (screen_x - render_x)] =
+                                true;
+                            render_cnt += 1;
                             let byte_offset = (offset + layer_x + x) * self.info.bytes_per_pixel;
                             let color = framebuffer[y * layer_width + x];
                             self.framebuffer[byte_offset] = color.b;
                             self.framebuffer[byte_offset + 1] = color.g;
                             self.framebuffer[byte_offset + 2] = color.r;
+                            if render_cnt >= total_render {
+                                return;
+                            }
                         }
                     }
                 }
@@ -252,14 +266,23 @@ impl Painter {
                             let screen_x = x + layer_x;
                             if (framebuffer[y * layer_width + x].a as f32) == 0.0
                                 || screen_x >= self.info.width
+                                || rendered
+                                    [(screen_y - render_y) * render_width + (screen_x - render_x)]
                             {
                                 continue;
                             }
+                            rendered
+                                [(screen_y - render_y) * render_width + (screen_x - render_x)] =
+                                true;
+                            render_cnt += 1;
                             let byte_offset = (offset + layer_x + x) * self.info.bytes_per_pixel;
                             let color = framebuffer[y * layer_width + x];
                             self.framebuffer[byte_offset] = color.r;
                             self.framebuffer[byte_offset + 1] = color.g;
                             self.framebuffer[byte_offset + 2] = color.b;
+                            if render_cnt >= total_render {
+                                return;
+                            }
                         }
                     }
                 }

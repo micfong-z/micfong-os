@@ -60,7 +60,7 @@ impl Layer {
     }
 
     pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
-        if x >= self.width || y >= self.height {
+        if x >= self.width || y >= self.height || color.a == 0.0 {
             return;
         }
 
@@ -75,10 +75,10 @@ impl Layer {
         }
     }
 
-    pub fn draw_bitmap(&mut self, x: u32, y: u32, width: u32, height: u32, bitmap: &[Color]) {
-        for y in y..y + height {
-            for x in x..x + width {
-                self.draw_pixel(x, y, bitmap[(y * width + x) as usize]);
+    pub fn draw_bitmap(&mut self, x_pos: u32, y_pos: u32, width: u32, height: u32, bitmap: &[Color]) {
+        for y in 0..height {
+            for x in 0..width {
+                self.draw_pixel(x_pos + x, y_pos + y, bitmap[(y * width + x) as usize]);
             }
         }
     }
@@ -151,6 +151,10 @@ impl LayerController {
 
     pub fn get_layers_iter(&self) -> impl Iterator<Item = &Arc<Mutex<Layer>>> {
         self.layers.iter()
+    }
+
+    pub fn get_layers_iter_rev(&self) -> impl Iterator<Item = &Arc<Mutex<Layer>>> {
+        self.layers.iter().rev()
     }
 }
 

@@ -23,6 +23,7 @@ pub mod log;
 pub mod memory;
 pub mod serial;
 pub mod unifont;
+pub mod gui;
 
 pub fn hlt_loop() -> ! {
     loop {

@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use core::panic::PanicInfo;
+use core::{panic::PanicInfo, u32::MAX};
 
 use bootloader_api::{
     config::{BootloaderConfig, Mapping},
@@ -15,7 +15,7 @@ use kernel::{
     layer::{self, Layer, LAYER_CONTROLLER},
     log, log_info, log_ok, log_panic, log_trace,
     memory::{self, BootInfoFrameAllocator},
-    print, serial_println,
+    print, serial_println
 };
 use x86_64::{instructions, VirtAddr};
 
@@ -102,10 +102,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     );
     background_layer.draw_rect(20, 20, 120, 120, colors::ORANGE);
 
-    let mut mouse_cursor_layer = Layer::new(13, 19, screen_width / 2, screen_height / 2, 10);
+    let mut mouse_cursor_layer = Layer::new(13, 19, screen_width / 2, screen_height / 2, MAX);
     mouse_cursor_layer.draw_bitmap(0, 0, 13, 19, &bitmap::MOUSE_CURSOR);
 
+    let mut test_window_layer = Layer::new(200, 100, 120, 80, 1);
+    test_window_layer.draw_window("Test Window");
+
     layer::add_layer(background_layer);
+    layer::add_layer(test_window_layer);
     let mouse_cursor_layer = layer::add_layer(mouse_cursor_layer);
 
     let layer_controller = LAYER_CONTROLLER.get().unwrap().lock();

@@ -33,3 +33,4 @@ pub const TRACE_LOG: Color = Color::new(0xAAAAAA, 1.0);
 pub const MOUSE_FILL: Color = Color::new(0x101010, 1.0);
 
 pub const TRANSPARENT: Color = Color::new(0x000000, 0.0);
+pub const WINDOW_BORDER: Color = Color::new(0x383838, 1.0);
